@@ -2,6 +2,9 @@ namespace SpriteKind {
     export const Diamont = SpriteKind.create()
     export const Egg = SpriteKind.create()
 }
+controller.up.onEvent(ControllerButtonEvent.Pressed, function () {
+    attemptJump()
+})
 function start_level () {
     Super_Duck.ay = 400
     if (current_level == 0) {
@@ -522,6 +525,20 @@ function start_level () {
         tiles.setTileAt(value, assets.tile`transparency16`)
     }
 }
+function attemptJump () {
+    if (Super_Duck.isHittingTile(CollisionDirection.Bottom)) {
+        Super_Duck.vy = -4 * pixelsToMeters
+    } else if (canDoubleJump) {
+        doubleJumpSpeed = -3 * pixelsToMeters
+        if (Super_Duck.vy >= -40) {
+            doubleJumpSpeed = -4.5 * pixelsToMeters
+            Super_Duck.startEffect(effects.ashes, 500)
+            scene.cameraShake(2, 250)
+        }
+        Super_Duck.vy = doubleJumpSpeed
+        canDoubleJump = false
+    }
+}
 controller.B.onEvent(ControllerButtonEvent.Pressed, function () {
     if (facing_right) {
         shoot_speed = 100
@@ -632,9 +649,7 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Egg, function (sprite, otherSpri
     Fat_Beak.follow(Super_Duck)
 })
 controller.A.onEvent(ControllerButtonEvent.Pressed, function () {
-    if (Super_Duck.vy == 0) {
-        Super_Duck.vy = -200
-    }
+    attemptJump()
 })
 controller.left.onEvent(ControllerButtonEvent.Pressed, function () {
     if (facing_right) {
@@ -651,6 +666,11 @@ controller.right.onEvent(ControllerButtonEvent.Pressed, function () {
 scene.onOverlapTile(SpriteKind.Player, sprites.dungeon.hazardLava1, function (sprite, location) {
     game.gameOver(false)
     game.setGameOverEffect(false, effects.melt)
+})
+controller.down.onEvent(ControllerButtonEvent.Pressed, function () {
+    if (!(Super_Duck.isHittingTile(CollisionDirection.Bottom))) {
+        Super_Duck.vy += 80
+    }
 })
 sprites.onOverlap(SpriteKind.Projectile, SpriteKind.Enemy, function (sprite, otherSprite) {
     sprites.destroy(otherSprite, effects.fire, 100)
@@ -673,11 +693,15 @@ sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function (sprite, otherSp
 let Fat_Beak: Sprite = null
 let projectile: Sprite = null
 let shoot_speed = 0
+let doubleJumpSpeed = 0
+let canDoubleJump = false
 let Egg: Sprite = null
 let Diamont: Sprite = null
 let current_level = 0
 let facing_right = false
+let pixelsToMeters = 0
 let Super_Duck: Sprite = null
+music.play(music.createSong(hex`00f4010408020a00001c00010a006400f4016400000400000000000000000000000000050000040d000000040002252a08000c00012401001c000f05001202c102c20100040500280000006400280003140006020004120028002c0001202c003000012430003400012402001c000c960064006d019001000478002c010000640032000000000a0600052a0000000400011d08000c00011d10001400011e18001c00012020002400012028002c00012c30003400012c03001c0001dc00690000045e01000400000000000000000000056400010400030c0008000c00012710001400012704001c00100500640000041e000004000000000000000000000000000a040004310000000400011908000c0002192a14001800011b18001c00011d1c002000011920002400011b28002c00011930003400011905001c000f0a006400f4010a000004000000000000000000000000000000000212000c001000012a14001800012a1c002000012a06001c00010a006400f401640000040000000000000000000000000000000002120018001c0001271c002000012424002800012707001c00020a006400f401640000040000000000000000000000000000000003120020002400012a24002800012428002c00012708001c000e050046006603320000040a002d0000006400140001320002010002120000000400012008000c00012010001400012209010e02026400000403780000040a000301000000640001c80000040100000000640001640000040100000000fa0004af00000401c80000040a00019600000414000501006400140005010000002c0104dc00000401fa0000040a0001c8000004140005d0076400140005d0070000c800029001f40105c201f4010a0005900114001400039001000005c201f4010500058403050032000584030000fa00049001000005c201f4010500058403c80032000584030500640005840300009001049001000005c201f4010500058403c80064000584030500c8000584030000f40105ac0d000404a00f00000a0004ac0d2003010004a00f0000280004ac0d9001010004a00f0000280002d00700040408070f0064000408070000c80003c800c8000e7d00c80019000e64000f0032000e78000000fa00032c01c8000ee100c80019000ec8000f0032000edc000000fa0003f401c8000ea901c80019000e90010f0032000ea4010000fa0001c8000004014b000000c800012c01000401c8000000c8000190010004012c010000c80002c800000404c8000f0064000496000000c80002c2010004045e010f006400042c010000640002c409000404c4096400960004f6090000f40102b80b000404b80b64002c0104f40b0000f401022003000004200300040a000420030000ea01029001000004900100040a000490010000900102d007000410d0076400960010d0070000c8000e00040005000306080b10001100010b`), music.PlaybackMode.UntilDone)
 scene.setBackgroundImage(img`
     9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
     9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
@@ -819,7 +843,14 @@ Super_Duck = sprites.create(img`
     . . . . . . . . . . . . . . . . 
     `, SpriteKind.Player)
 controller.moveSprite(Super_Duck, 100, 0)
+pixelsToMeters = 30
 info.setLife(5)
 let set_current_level = 0
 start_level()
 facing_right = true
+let gravity = 9.81 * pixelsToMeters
+game.onUpdate(function () {
+    if (Super_Duck.isHittingTile(CollisionDirection.Bottom)) {
+        canDoubleJump = true
+    }
+})
